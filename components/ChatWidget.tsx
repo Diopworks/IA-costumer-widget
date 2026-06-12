@@ -1,7 +1,7 @@
 "use client";
 
 import React, { useState } from "react";
-import { MessageSquare, X, Send, Bot, User } from "lucide-react";
+import { MessageSquare, X, Send, Bot } from "lucide-react";
 
 // Structure d'un message
 interface Message {
@@ -15,7 +15,7 @@ export default function ChatWidget() {
   const [isOpen, setIsOpen] = useState(false);
   const [inputMessage, setInputMessage] = useState("");
   
-  // Historique des messages avec un message de bienvenue par défaut
+  // Historique des messages avec le message de bienvenue initial
   const [messages, setMessages] = useState<Message[]>([
     {
       id: "welcome",
@@ -25,15 +25,15 @@ export default function ChatWidget() {
     },
   ]);
   
-  // État de chargement (simulera l'attente de l'API IA)
+  // État de chargement pendant que l'API Gemini répond
   const [isLoading, setIsLoading] = useState(false);
 
-  // Fonction déclenchée lors de l'envoi du formulaire
+  // Fonction de gestion de l'envoi du message
   const handleSendMessage = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!inputMessage.trim()) return; // Évite d'envoyer du vide
+    if (!inputMessage.trim()) return; // Évite les messages vides
 
-    // 1. Créer et ajouter le message de l'utilisateur
+    // 1. Créer et ajouter le message de l'utilisateur à l'écran
     const userMessage: Message = {
       id: Math.random().toString(36).substring(7),
       text: inputMessage,
@@ -42,21 +42,46 @@ export default function ChatWidget() {
     };
 
     setMessages((prev) => [...prev, userMessage]);
-    const currentQuery = inputMessage; // On garde une copie
-    setInputMessage(""); // On vide le champ de texte
-    setIsLoading(true);  // On active l'animation de chargement
+    const currentQuery = inputMessage; // Sauvegarde du texte avant reset
+    setInputMessage("");               // Nettoyage de l'input
+    setIsLoading(true);                // Déclenchement de l'animation de chargement
 
-    // 2. SIMULATION DE L'OPTION 2 (En attendant de brancher la vraie API)
-    setTimeout(() => {
+    // 2. Appel réel à notre API Backend Next.js (connectée à Gemini)
+    try {
+      const response = await fetch("/api/chat", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ message: currentQuery }),
+      });
+
+      if (!response.ok) throw new Error("Erreur lors de la récupération");
+
+      const data = await response.json();
+
       const aiResponse: Message = {
         id: Math.random().toString(36).substring(7),
-        text: `Vous avez dit : "${currentQuery}". Mon cerveau IA sera totalement connecté à l'étape suivante !`,
+        text: data.reply,
         sender: "ai",
         createdAt: new Date(),
       };
+
       setMessages((prev) => [...prev, aiResponse]);
-      setIsLoading(false); // On arrête le chargement
-    }, 1500); // Faux délai de 1.5 secondes
+    } catch (error) {
+      console.error("Erreur de communication avec l'API :", error);
+      
+      // Message d'erreur élégant affiché directement dans la bulle
+      setMessages((prev) => [
+        ...prev,
+        {
+          id: "error",
+          text: "Mince, j'ai eu un petit problème technique pour me connecter à mon cerveau. Réessayez ?",
+          sender: "ai",
+          createdAt: new Date(),
+        },
+      ]);
+    } finally {
+      setIsLoading(false); // Arrêt de l'indicateur de chargement
+    }
   };
 
   return (
@@ -117,7 +142,7 @@ export default function ChatWidget() {
             <form onSubmit={handleSendMessage} className="flex items-center gap-2">
               <input
                 type="text"
-                placeholder="Écrivez votre message..."
+                placeholder="Posez une question..."
                 value={inputMessage}
                 onChange={(e) => setInputMessage(e.target.value)}
                 disabled={isLoading}

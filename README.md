@@ -1,4 +1,4 @@
-#  IA Customer Support Widget
+# IA Customer Support Widget (WIP 🚧)
 
 An AI-powered, embeddable live chat widget built for modern websites. It leverages Retrieval-Augmented Generation (RAG) to answer customer queries using custom business documentation.
 
